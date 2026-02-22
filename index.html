@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ปราบ นางบา </title>
+    <style>
+        :root {
+            --bg-color: #000;
+            --text-color: #fff;
+            --box-bg: #0d0d0d;
+            --border-color: #222;
+            --config-bg: #111;
+            --dot-empty: #1a1a1a;
+            --accent: #fbc02d;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg-color); color: var(--text-color); 
+            margin: 0; padding: 15px; 
+            display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh;
+            overflow-y: auto; /* เลื่อนขึ้นลงได้ */
+            overflow-x: hidden; /* ปิดเลื่อนซ้ายขวาของหน้าจอหลัก */
+        }
+
+        .top-bar { width: 100%; max-width: 400px; display: flex; justify-content: flex-end; margin-bottom: 20px; }
+        .btn-more { background: var(--config-bg); border: 1px solid var(--border-color); color: var(--text-color); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+        
+        .prediction-center { margin-bottom: 15px; text-align: center; min-height: 130px; }
+        .target-circle {
+            width: 100px; height: 100px; border: 3px solid var(--border-color);
+            border-radius: 50%; margin: 0 auto; line-height: 94px;
+            font-size: 40px; font-weight: bold; color: #555; background: var(--box-bg);
+        }
+        .active-P { background: #0044ff !important; color: #fff !important; border-color: #3498db !important; box-shadow: 0 0 30px #0044ff; }
+        .active-B { background: #cc0000 !important; color: #fff !important; border-color: #e74c3c !important; box-shadow: 0 0 30px #cc0000; }
+        
+        .stats-wrapper { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .capsule-stats { background: var(--box-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 5px 10px; display: flex; gap: 8px; width: 90px; justify-content: space-around; }
+        .stat-badge { display: flex; flex-direction: column; align-items: center; font-size: 12px; font-weight: bold; }
+        .circle-micro { width: 8px; height: 8px; border-radius: 50%; margin-bottom: 2px; }
+        .bg-p { background: #0044ff; } .bg-b { background: #cc0000; } .bg-t { background: #2ecc71; } .bg-all { background: #888; }
+        
+        /* Road Map Box - ปิดการเลื่อน */
+        .plate-box { 
+            background: var(--box-bg); border-radius: 15px; padding: 10px; 
+            width: 100%; max-width: 400px; margin-bottom: 20px; border: 1px solid var(--border-color);
+            overflow: hidden; /* ปิดตาย ไม่ให้เลื่อนเด็ดขาด */
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(12, 1fr); /* ล็อกไว้ที่ 12 คอลัมน์ให้พอดีจอ */
+            grid-template-rows: repeat(6, 1fr); 
+            grid-auto-flow: column; 
+            gap: 4px; 
+            width: 100%;
+        }
+        .dot { width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--dot-empty); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+        .dot.P { background: #0044ff; color: #fff; } .dot.B { background: #cc0000; color: #fff; } .dot.T { background: #2ecc71; color: #fff; }
+
+        .main-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 380px; margin-bottom: 15px; }
+        .btn { padding: 22px 0; border: none; border-radius: 15px; font-size: 26px; font-weight: bold; color: #fff; cursor: pointer; }
+        .btn-p { background: #0044ff; } .btn-t { background: #2ecc71; } .btn-b { background: #cc0000; }
+        
+        .util-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 380px; padding-bottom: 40px; } 
+        .btn-sub { padding: 14px 0; border: none; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; background: var(--config-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--box-bg); width: 85%; max-width: 320px; border-radius: 20px; padding: 20px; border: 1px solid var(--border-color); text-align: center; color: var(--text-color); }
+        .grid-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; }
+        .opt-btn { background: var(--config-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 10px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .opt-btn.active { border-color: var(--accent); color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <button class="btn-more" onclick="openModal('martingaleModal')">⋮</button>
+    </div>
+
+    <div class="prediction-center">
+        <div id="target" class="target-circle">-</div>
+        <div id="stepInfo" style="color: #888; font-size: 13px; margin-top: 10px; font-weight: bold;"></div>
+    </div>
+
+    <div class="stats-wrapper">
+        <div class="capsule-stats">
+            <div class="stat-badge"><div class="circle-micro bg-p"></div><span id="countP">0</span></div>
+            <div class="stat-badge"><div class="circle-micro bg-t"></div><span id="countT">0</span></div>
+            <div class="stat-badge"><div class="circle-micro bg-b"></div><span id="countB">0</span></div>
+            <div class="stat-badge"><div class="circle-micro bg-all"></div><span id="countAll">0</span></div>
+        </div>
+        <button class="btn-sub" style="padding: 5px 15px; font-size: 12px; border-radius: 20px;" onclick="openWinHistory()">ชนะ (<span id="winCount">0</span>)</button>
+    </div>
+
+    <div class="plate-box">
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <div class="main-buttons">
+        <button class="btn btn-p" onclick="processAdd('P')">P</button>
+        <button class="btn btn-t" onclick="processAdd('T')">T</button>
+        <button class="btn btn-b" onclick="processAdd('B')">B</button>
+    </div>
+
+    <div class="util-grid">
+        <button class="btn-sub" onclick="undo()">ย้อนกลับ</button>
+        <button class="btn-sub" style="color:#fbc02d;" onclick="reset()">ล้างข้อมูล</button>
+    </div>
+
+    <div id="martingaleModal" class="modal" onclick="closeModals()"><div class="modal-content" onclick="event.stopPropagation()"><h3>ตั้งค่าไม้ทบ</h3><div class="grid-options" id="marthinGrid"></div><button class="btn-sub" style="width:100%; margin-top:20px;" onclick="closeModals()">ตกลง</button></div></div>
+    
+    <div id="historyOverlay" class="modal" onclick="closeModals()"><div class="modal-content" style="height: 70%; overflow: hidden; display: flex; flex-direction: column;" onclick="event.stopPropagation()"><h2>ประวัติชนะ</h2><div id="historyList" style="flex-grow:1; overflow-y:auto; border-top:1px solid var(--border-color); text-align: left;"></div><button class="btn-sub" style="margin-top:20px; width:100%;" onclick="closeModals()">ปิด</button></div></div>
+
+<script>
+    let log = JSON.parse(localStorage.getItem('dna_log')) || [];
+    let winHistory = JSON.parse(localStorage.getItem('dna_winHistory')) || [];
+    let martingaleLimit = parseInt(localStorage.getItem('dna_limit')) || 6;
+    let currentWood = parseInt(localStorage.getItem('dna_wood')) || 1;
+    let profiles = [];
+    let isFound = false, aim = "", activeDNA = -1;
+
+    for(let i=0; i<32; i++) { profiles.push(i.toString(2).padStart(5,'0').split('').map(b => b === '0' ? 'M' : 'T')); }
+
+    function saveData() {
+        localStorage.setItem('dna_log', JSON.stringify(log));
+        localStorage.setItem('dna_winHistory', JSON.stringify(winHistory));
+        localStorage.setItem('dna_limit', martingaleLimit);
+        localStorage.setItem('dna_wood', currentWood);
+    }
+
+    function openModal(id) { 
+        if(id === 'martingaleModal') renderMartingaleOptions(); 
+        document.getElementById(id).style.display = 'flex'; 
+    }
+    function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+    
+    function renderMartingaleOptions() {
+        const container = document.getElementById('marthinGrid');
+        container.innerHTML = "";
+        for(let i=1; i<=12; i++) {
+            const btn = document.createElement('button');
+            btn.className = `opt-btn ${martingaleLimit === i ? 'active' : ''}`;
+            btn.innerText = i;
+            btn.onclick = () => { martingaleLimit = i; saveData(); renderMartingaleOptions(); };
+            container.appendChild(btn);
+        }
+    }
+
+    function openWinHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = winHistory.length === 0 ? '<p style="color:#666; text-align:center;">ไม่มีประวัติ</p>' : 
+            winHistory.map((item, idx) => `
+            <div style="padding:12px; border-bottom:1px solid var(--border-color); font-size:13px;">
+                <span>รอบที่ ${winHistory.length - idx}</span> 
+                <span style="float:right; color:${item.res === 'WIN' ? '#2ecc71' : '#e74c3c'}; font-weight:bold;">
+                    ${item.res === 'WIN' ? 'ชนะ ไม้ ' + item.wd : 'แพ้ ทบ ' + item.wd + ' ไม้'}
+                </span>
+            </div>`).join('');
+        openModal('historyOverlay');
+    }
+
+    function processAdd(v) {
+        if (v === 'T') { log.push({val: v, win: false}); render(); return; }
+        
+        let winRecorded = false;
+        if (isFound) {
+            if (v === aim) {
+                winHistory.unshift({ res: 'WIN', wd: currentWood });
+                winRecorded = true;
+                currentWood = 1;
+            } else {
+                if (currentWood >= martingaleLimit) {
+                    winHistory.unshift({ res: 'LOSE', wd: currentWood });
+                    currentWood = 1;
+                } else {
+                    currentWood++;
+                }
+                isFound = false; activeDNA = -1; aim = "";
+            }
+        }
+        log.push({val: v, win: winRecorded});
+        saveData();
+        render();
+    }
+
+    function undo() {
+        if(log.length > 0) {
+            let last = log.pop();
+            if(last.win) winHistory.shift();
+            isFound = false; activeDNA = -1; currentWood = 1; 
+            saveData();
+            render();
+        }
+    }
+
+    function reset() {
+        if(confirm("ล้างข้อมูลทั้งหมด?")) {
+            localStorage.clear();
+            log = []; winHistory = []; currentWood = 1; isFound = false; render();
+        }
+    }
+
+    function render() {
+        const grid = document.getElementById('grid'); grid.innerHTML = "";
+        let p=0, b=0, t=0;
+        log.forEach(item => {
+            const v = item.val;
+            const d = document.createElement('div'); d.className = 'dot ' + v;
+            d.innerText = v; grid.appendChild(d);
+            if(v==='P') p++; if(v==='B') b++; if(v==='T') t++;
+        });
+
+        document.getElementById('countP').innerText = p;
+        document.getElementById('countB').innerText = b;
+        document.getElementById('countT').innerText = t;
+        document.getElementById('countAll').innerText = (p + b + t);
+        
+        // ล็อกตารางไว้ที่ 72 จุด (12 คอลัมน์ x 6 แถว) ให้พอดีหน้าจอ
+        for(let i=log.length; i<72; i++) { const d = document.createElement('div'); d.className = 'dot'; grid.appendChild(d); }
+        document.getElementById('winCount').innerText = winHistory.filter(h => h.res === 'WIN').length;
+
+        const target = document.getElementById('target'), stepInfo = document.getElementById('stepInfo');
+        target.className = "target-circle"; target.innerText = "-"; target.style.color = "#888"; 
+        
+        const clean = log.map(x => x.val).filter(x => x !== 'T');
+        if (clean.length < 6) { stepInfo.innerText = "กำลังรอข้อมูล..."; return; }
+
+        if (!isFound) {
+            for (let d = 0; d < 32; d++) {
+                let streak = 0;
+                for (let r = 1; r < clean.length; r++) {
+                    let prev = clean[r-1], actual = clean[r];
+                    let pBit = profiles[d][r % 5];
+                    let predict = (pBit === 'M') ? prev : (prev === 'P' ? 'B' : 'P');
+                    if (predict !== actual) streak++; else streak = 0;
+                }
+                if (streak === 5) { isFound = true; activeDNA = d; break; }
+            }
+        }
+
+        if (isFound && activeDNA !== -1) {
+            let lastPrev = clean[clean.length - 1];
+            let nextBit = profiles[activeDNA][clean.length % 5];
+            aim = (nextBit === 'M') ? lastPrev : (lastPrev === 'P' ? 'B' : 'P');
+            target.innerText = currentWood + aim;
+            target.style.color = "#fff";
+            target.classList.add(`active-${aim}`);
+            stepInfo.innerText = `เจอจุดเข้า! แทงไม้ที่ ${currentWood}`;
+        } else {
+            stepInfo.innerText = currentWood > 1 ? `รอสแกน ❌5 ใหม่ (ทบไม้ ${currentWood})` : `กำลังสแกนหาจุด ❌5...`;
+        }
+    }
+    render();
+</script>
+</body>
+</html>
